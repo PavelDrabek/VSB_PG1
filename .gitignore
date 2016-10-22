@@ -28,6 +28,9 @@
 *.out
 *.app
 
-zpg_pg1/zpg/x64/Debug
-zpg_pg1/zpg/Debug
-zpg_pg1/ipch
+zpg_pg1/zpg/x64/Debug/
+zpg_pg1/zpg/Debug/
+zpg_pg1/zpg.VC.db
+zpg_pg1/zpg.VC.VC.opendb
+zpg_pg1/x64/Debug/
+zpg_pg1/ipch/

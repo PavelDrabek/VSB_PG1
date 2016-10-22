@@ -26,12 +26,13 @@ private:
 	int width_; /*!< Šíøka obrazu [px]. */
 	int height_; /*!< Výška obrazu [px]. */
 	bool done;
-	std::thread t1;
 
 	Camera* camera;
 	RTCScene* scene;
 	CubeMap* cubemap;
 	std::vector<Surface*> surfaces;
+
+	Vector3 lightPos;
 
 	Vector3 GetNormal(Ray ray);
 	Vector3 GetLightPos();

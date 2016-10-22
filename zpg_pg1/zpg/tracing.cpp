@@ -20,12 +20,21 @@ Tracer::Tracer(const int width, const int height)
 	//camera = new Camera(width, height, Vector3(-200, 150, -300)*0.8, Vector3(100, -50, -50), DEG2RAD(110.0f)); 
 	//camera = new Camera(width, height, Vector3(1, 1, 100), Vector3(2, 2, 1000), DEG2RAD(60.0f));
 	//camera = new Camera(width, height, Vector3(0, 0, 1), Vector3(1000, 0, 1000), DEG2RAD(90.0f)); 
-	camera = new Camera(width, height, Vector3(-400, 150, -300)*0.6, Vector3(100, -50, -50), DEG2RAD(110.0f));
-	//camera = new Camera(width, height, Vector3(-400, 370, -500), Vector3(70, 5, -40), DEG2RAD(40.0f));
+	//camera = new Camera(width, height, Vector3(-400, 150, -300)*0.6, Vector3(100, -50, -50), DEG2RAD(110.0f));
+	camera = new Camera(width, height, Vector3(-400, 370, -500), Vector3(70, 5, -40), DEG2RAD(40.0f));
     camera->Print();
+
+	lightPos = camera->view_from();
+	lightPos = Vector3(-200, 0, 0);
 
 	std::string directory = "../../data/";
 	cubemap = new CubeMap(directory);
+
+	Vector3 n = Vector3(0, 1, 0);
+	Vector3 d = Vector3(10, 1, 0).Normalized();
+	Vector3 v = -n.Reflect(d);
+	printf("direction: %f.2, %f.2, %f.2\n", d.x, d.y, d.z);
+	printf("reflect:   %f.2, %f.2, %f.2\n", v.x, v.y, v.z);
 }
 
 void Tracer::SetScene(RTCScene *scene, std::vector<Surface*> *surfaces)
@@ -68,7 +77,7 @@ Vector3 Tracer::GetColor(Ray ray) {
 }
 
 Vector3 Tracer::GetLightPos() {
-	return camera->view_from();
+	return lightPos;
 }
 
 Vector3 Tracer::GetLightDir(Ray ray) {
@@ -105,6 +114,7 @@ cv::Vec3f Tracer::TraceLambert(Ray ray) {
 
 cv::Vec3f Tracer::TracePhong(Ray ray, int deep) {
 	if (deep >= 3) {
+		printf("q");
 		return cv::Vec3f(0, 0, 0);
 	}
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
@@ -116,17 +126,18 @@ cv::Vec3f Tracer::TracePhong(Ray ray, int deep) {
 	Vector3 viewDir = -(Vector3)ray.dir;
 	Vector3 normal = GetNormal(ray);
 	Vector3 lightDir = GetLightDir(ray);
-	Vector3 lightReflect = normal.Reflect(viewDir);
+	Vector3 lightReflect = -normal.Reflect(lightDir);
 
-	float dotDif = normal.DotProduct(lightDir);
-	float dotSpec = viewDir.DotProduct(lightReflect);
+	float dotDif = MAX(0, normal.DotProduct(lightDir));
+	float dotSpec = MAX(0, viewDir.DotProduct(lightReflect));
 
 	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
-	Vector3 diffuse = GetColor(ray); 
+	Vector3 diffuse = GetColor(ray) * dotDif;
+	//Vector3 diffuse = Vector3(0.5f, 0.5f, 0.5f);
 
-	Ray nRay = Ray(ray.eval(ray.tfar), normal.Reflect(viewDir));
+	Ray nRay = Ray(ray.eval(ray.tfar), -normal.Reflect(viewDir));
 
-	cv::Vec3f specular = TracePhong(nRay, deep + 1);
+	cv::Vec3f specular = ToColor(GetColor(ray)) * TracePhong(nRay, deep + 1) * dotSpec;
 	cv::Vec3f phong = ToColor(ambient + diffuse) + specular;
 
 	return phong;

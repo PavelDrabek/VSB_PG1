@@ -25,6 +25,12 @@ Tracer::Tracer(const int width, const int height)
 	cubemap = new CubeMap(directory);
 }
 
+void Tracer::SetScene(RTCScene *scene, std::vector<Surface*> *surfaces)
+{
+	this->scene = scene;
+	this->surfaces = *surfaces;
+}
+
 void Tracer::Render()
 {
 	printf("\nRender started\n");
@@ -36,36 +42,21 @@ void Tracer::Render()
 			Ray rtc_ray = camera->GenerateRay(x, y);
 			rtcIntersect(*scene, rtc_ray); 
 
-			src_32fc3_img.at<cv::Vec3f>(y, x) = TraceNormal(rtc_ray);
+			//src_32fc3_img.at<cv::Vec3f>(y, x) = TraceNormal(rtc_ray);
+			src_32fc3_img.at<cv::Vec3f>(y, x) = TraceLambert(rtc_ray);
 		}
 	}
+	
 	std::clock_t timeStop = std::clock();
-
 	printf("\nRendered in %d ms\n", (timeStop - timeStart));
 	done = true;
 }
 
 Vector3 Tracer::GetNormal(Ray ray) {
-	return surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
-	//return ((Vector3)(ray.Ng)).Normalized();
-}
-
-cv::Vec3f Tracer::TraceLambert(Ray ray) {
-	rtcIntersect(*scene, ray);
-
-	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
-		return GetCubeMapColor(ray.dir);
-	}
-
-	Vector3 point = ray.eval(ray.tfar);
-	Vector3 camPos = camera->view_from();
-	Vector3 lightDir = (point - camPos).Normalized();
-
-	Vector3 normal = GetNormal(ray);
-	float dot = normal.DotProduct(lightDir);
-
-	Vector3 lambert = dot * Vector3(0.5f, 0.5f, 0.5f);
-	return cv::Vec3f(lambert.z, lambert.y, lambert.x);
+	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
+	//return n;
+	//return -Vector3(n.x, n.y, n.z);
+	return ((Vector3)(ray.Ng)).Normalized();
 }
 
 cv::Vec3f Tracer::TraceNormal(Ray ray) {
@@ -79,6 +70,27 @@ cv::Vec3f Tracer::TraceNormal(Ray ray) {
 	Vector3 color = ((normal * 0.5f) + Vector3(0.5f, 0.5f, 0.5f));
 
 	return cv::Vec3f(color.z, color.y, color.x);
+}
+
+cv::Vec3f Tracer::TraceLambert(Ray ray) {
+	rtcIntersect(*scene, ray);
+
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return GetCubeMapColor(ray.dir);
+	}
+
+	Vector3 color = Vector3(0.5f, 0.5f, 0.5f);
+	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
+
+	Vector3 point = ray.eval(ray.tfar);
+	Vector3 camPos = camera->view_from();
+	Vector3 lightDir = (point - camPos).Normalized();
+
+	Vector3 normal = -GetNormal(ray);
+
+	float dot = normal.DotProduct(lightDir);
+	Vector3 lambert = MAX(0, dot) * color;
+	return cv::Vec3f(lambert.z, lambert.y, lambert.x);
 }
 
 cv::Vec3f Tracer::TracePhong(Ray ray) {
@@ -123,12 +135,6 @@ void Tracer::TestBackgroundRender()
 	cubemap->PrintShowedTextures();
 }
 
-void Tracer::SetScene(RTCScene *scene, std::vector<Surface*> *surfaces)
-{
-	this->scene = scene;
-	this->surfaces = *surfaces;
-}
-
 void Tracer::ShowScene() {
 	cv::namedWindow("raytracer");
 	cv::imshow("raytracer", src_32fc3_img);
@@ -147,7 +153,4 @@ void Tracer::ShowSceneLoop() {
 	} while (!done && cv::waitKey(100) != 32);
 	m_thread.join();
 	printf("\nRefreshing stop\n");
-
-	ShowScene();
-	cv::waitKey(0);
 }

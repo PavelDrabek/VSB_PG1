@@ -33,6 +33,11 @@ void Vector3::Normalize()
 	}
 }
 
+Vector3 Vector3::Reflect(const Vector3 &d) const
+{
+	return d - 2 * DotProduct(d) * *this;
+}
+
 Vector3 Vector3::Normalized() 
 {
 	Vector3 v = Vector3(x,y,z);

@@ -34,12 +34,15 @@ private:
 	std::vector<Surface*> surfaces;
 
 	Vector3 GetNormal(Ray ray);
+	Vector3 GetLightPos();
+	Vector3 GetLightDir(Ray ray);
 	Vector3 GetColor(Ray ray);
+
 	cv::Vec3f GetCubeMapColor(Vector3 dir);
-	
+
 	cv::Vec3f TraceNormal(Ray ray);
 	cv::Vec3f TraceLambert(Ray ray);
-	cv::Vec3f TracePhong(Ray ray);
+	cv::Vec3f TracePhong(Ray ray, int deep);
 
 	std::thread m_thread;
 };

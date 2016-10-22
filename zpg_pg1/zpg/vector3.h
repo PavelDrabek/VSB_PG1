@@ -102,6 +102,8 @@ public:
 
 	Vector3 Max( const float a = 0 ) const;
 
+	Vector3 Reflect(const Vector3 & v) const;
+
 	//! Skalární souèin.
 	/*!		
 	\return Hodnotu \f$\mathbf{u}_x \mathbf{v}_x + \mathbf{u}_y \mathbf{v}_y + \mathbf{u}_z \mathbf{v}_z)\f$.

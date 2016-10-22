@@ -3,6 +3,9 @@
 //rtcIntersect(*scene, rtc_ray); // find the closest hit of a ray segment with the scene
 //rtcOccluded(scene, rtc_ray); // determining if any hit between a ray segment and the scene exists
 
+cv::Vec3f ToColor(Vector3 v) {
+	return cv::Vec3f(v.z, v.y, v.x);
+}
 
 Tracer::Tracer(const int width, const int height)
 {
@@ -43,7 +46,8 @@ void Tracer::Render()
 			rtcIntersect(*scene, rtc_ray); 
 
 			//src_32fc3_img.at<cv::Vec3f>(y, x) = TraceNormal(rtc_ray);
-			src_32fc3_img.at<cv::Vec3f>(y, x) = TraceLambert(rtc_ray);
+			//src_32fc3_img.at<cv::Vec3f>(y, x) = TraceLambert(rtc_ray);
+			src_32fc3_img.at<cv::Vec3f>(y, x) = TracePhong(rtc_ray, 0);
 		}
 	}
 	
@@ -55,12 +59,20 @@ void Tracer::Render()
 Vector3 Tracer::GetNormal(Ray ray) {
 	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
 	Vector3 n2 = ((Vector3)(ray.Ng)).Normalized();
-	//return -n2;
-	return -Vector3(n.x, n.z, n.y);
+	//return n2;
+	return Vector3(n.x, n.z, n.y);
 }
 
 Vector3 Tracer::GetColor(Ray ray) {
-	return surfaces[ray.geomID]->get_material()->ambient; // get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
+	return surfaces[ray.geomID]->get_material()->diffuse;
+}
+
+Vector3 Tracer::GetLightPos() {
+	return camera->view_from();
+}
+
+Vector3 Tracer::GetLightDir(Ray ray) {
+	return (GetLightPos() - ray.eval(ray.tfar)).Normalized();
 }
 
 cv::Vec3f Tracer::TraceNormal(Ray ray) {
@@ -70,7 +82,7 @@ cv::Vec3f Tracer::TraceNormal(Ray ray) {
 		return GetCubeMapColor(ray.dir);
 	}
 
-	Vector3 normal = -GetNormal(ray);
+	Vector3 normal = GetNormal(ray);
 	Vector3 color = ((normal * 0.5f) + Vector3(0.5f, 0.5f, 0.5f));
 
 	return cv::Vec3f(color.z, color.y, color.x);
@@ -83,42 +95,41 @@ cv::Vec3f Tracer::TraceLambert(Ray ray) {
 		return GetCubeMapColor(ray.dir);
 	}
 
-	Vector3 color = Vector3(0.5f, 0.5f, 0.5f);
+	Vector3 diffuse = GetColor(ray); // Vector3(0.5f, 0.5f, 0.5f);
 	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
 
-	Vector3 point = ray.eval(ray.tfar);
-	Vector3 camPos = camera->view_from();
-	Vector3 lightDir = (point - camPos).Normalized();
-
-	Vector3 normal = GetNormal(ray);
-
-	float dot = normal.DotProduct(lightDir);
-	Vector3 lambert = MAX(0, dot) * color;
+	float dot = GetNormal(ray).DotProduct(GetLightDir(ray));
+	Vector3 lambert = MAX(0, dot) * diffuse;
 	return cv::Vec3f(lambert.z, lambert.y, lambert.x);
 }
 
-cv::Vec3f Tracer::TracePhong(Ray ray) {
-	rtcIntersect(*scene, ray);
-
+cv::Vec3f Tracer::TracePhong(Ray ray, int deep) {
+	if (deep >= 3) {
+		return cv::Vec3f(0, 0, 0);
+	}
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
 		return GetCubeMapColor(ray.dir);
 	}
 
-	Vector3 point = ray.eval(ray.tfar);
-	Vector3 camPos = camera->view_from();
-	Vector3 lightDir = (point - camPos).Normalized();
-	Vector3 matColor = surfaces[ray.geomID]->get_material()->diffuse;
+	rtcIntersect(*scene, ray);
 
+	Vector3 viewDir = -(Vector3)ray.dir;
 	Vector3 normal = GetNormal(ray);
-	float dot = normal.DotProduct(lightDir);
+	Vector3 lightDir = GetLightDir(ray);
+	Vector3 lightReflect = normal.Reflect(viewDir);
+
+	float dotDif = normal.DotProduct(lightDir);
+	float dotSpec = viewDir.DotProduct(lightReflect);
 
 	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
-	Vector3 diffuse = matColor;
-	Vector3 phong = ambient + dot * diffuse;
+	Vector3 diffuse = GetColor(ray); 
 
+	Ray nRay = Ray(ray.eval(ray.tfar), normal.Reflect(viewDir));
 
-	Vector3 lambert = dot * Vector3(0.5f, 0.5f, 0.5f);
-	return cv::Vec3f(lambert.z, lambert.y, lambert.x);
+	cv::Vec3f specular = TracePhong(nRay, deep + 1);
+	cv::Vec3f phong = ToColor(ambient + diffuse) + specular;
+
+	return phong;
 }
 
 cv::Vec3f Tracer::GetCubeMapColor(Vector3 dir) {

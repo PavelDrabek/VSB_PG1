@@ -54,9 +54,13 @@ void Tracer::Render()
 
 Vector3 Tracer::GetNormal(Ray ray) {
 	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
-	//return n;
-	//return -Vector3(n.x, n.y, n.z);
-	return ((Vector3)(ray.Ng)).Normalized();
+	Vector3 n2 = ((Vector3)(ray.Ng)).Normalized();
+	//return -n2;
+	return -Vector3(n.x, n.z, n.y);
+}
+
+Vector3 Tracer::GetColor(Ray ray) {
+	return surfaces[ray.geomID]->get_material()->ambient; // get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
 }
 
 cv::Vec3f Tracer::TraceNormal(Ray ray) {
@@ -66,7 +70,7 @@ cv::Vec3f Tracer::TraceNormal(Ray ray) {
 		return GetCubeMapColor(ray.dir);
 	}
 
-	Vector3 normal = GetNormal(ray);
+	Vector3 normal = -GetNormal(ray);
 	Vector3 color = ((normal * 0.5f) + Vector3(0.5f, 0.5f, 0.5f));
 
 	return cv::Vec3f(color.z, color.y, color.x);
@@ -86,7 +90,7 @@ cv::Vec3f Tracer::TraceLambert(Ray ray) {
 	Vector3 camPos = camera->view_from();
 	Vector3 lightDir = (point - camPos).Normalized();
 
-	Vector3 normal = -GetNormal(ray);
+	Vector3 normal = GetNormal(ray);
 
 	float dot = normal.DotProduct(lightDir);
 	Vector3 lambert = MAX(0, dot) * color;

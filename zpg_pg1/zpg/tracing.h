@@ -34,6 +34,7 @@ private:
 	std::vector<Surface*> surfaces;
 
 	Vector3 GetNormal(Ray ray);
+	Vector3 GetColor(Ray ray);
 	cv::Vec3f GetCubeMapColor(Vector3 dir);
 	
 	cv::Vec3f TraceNormal(Ray ray);

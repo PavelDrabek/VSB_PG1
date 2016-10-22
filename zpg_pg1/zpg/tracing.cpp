@@ -79,64 +79,13 @@ void Tracer::Render()
 	done = true;
 }
 
-Vector3 Tracer::GetNormal(Ray &ray) {
-	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
-	Vector3 n2 = ((Vector3)(ray.Ng)).Normalized();
-	//return n2;
-	return Vector3(n.x, n.z, n.y);
-}
-
-Vector3 Tracer::GetColor(Ray &ray) {
-	return surfaces[ray.geomID]->get_material()->diffuse;
-}
-
-Vector3 Tracer::GetPoint(Ray &ray) {
-	return ray.eval(ray.tfar) - ((Vector3)ray.dir * 0.001f);
-}
-
-Vector3 Tracer::GetLightPos() {
-	return lightPos;
-}
-
-Vector3 Tracer::GetLightDir(Vector3 point) {
-	return (GetLightPos() - point).Normalized();
-}
-
-cv::Vec3d Tracer::TraceNormal(Ray ray) {
-	rtcIntersect(*scene, ray);
-
-	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
-		return GetCubeMapColor(ray.dir);
-	}
-
-	Vector3 normal = GetNormal(ray);
-	Vector3 color = ((normal * 0.5f) + Vector3(0.5f, 0.5f, 0.5f));
-
-	return cv::Vec3d(color.z, color.y, color.x);
-}
-
-cv::Vec3d Tracer::TraceLambert(Ray ray) {
-	rtcIntersect(*scene, ray);
-
-	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
-		return GetCubeMapColor(ray.dir);
-	}
-
-	Vector3 diffuse = GetColor(ray); // Vector3(0.5f, 0.5f, 0.5f);
-	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
-
-	float dot = GetNormal(ray).DotProduct(GetLightDir(GetPoint(ray)));
-	Vector3 lambert = MAX(0, dot) * diffuse;
-	return cv::Vec3d(lambert.z, lambert.y, lambert.x);
-}
-
 cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 	if (deep >= maxDeep) {
 		returnInterrupt++;
 		return cv::Vec3d(0, 0, 0);
 		//return GetCubeMapColor(ray.dir);
 	}
-	
+
 	rtcIntersect(*scene, ray);
 	raysAll++;
 
@@ -170,6 +119,57 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 
 	returnFinish++;
 	return phong;
+}
+
+cv::Vec3d Tracer::TraceLambert(Ray ray) {
+	rtcIntersect(*scene, ray);
+
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return GetCubeMapColor(ray.dir);
+	}
+
+	Vector3 diffuse = GetColor(ray); // Vector3(0.5f, 0.5f, 0.5f);
+	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
+
+	float dot = GetNormal(ray).DotProduct(GetLightDir(GetPoint(ray)));
+	Vector3 lambert = MAX(0, dot) * diffuse;
+	return cv::Vec3d(lambert.z, lambert.y, lambert.x);
+}
+
+cv::Vec3d Tracer::TraceNormal(Ray ray) {
+	rtcIntersect(*scene, ray);
+
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return GetCubeMapColor(ray.dir);
+	}
+
+	Vector3 normal = GetNormal(ray);
+	Vector3 color = ((normal * 0.5f) + Vector3(0.5f, 0.5f, 0.5f));
+
+	return cv::Vec3d(color.z, color.y, color.x);
+}
+
+Vector3 Tracer::GetNormal(Ray &ray) {
+	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
+	Vector3 n2 = ((Vector3)(ray.Ng)).Normalized();
+	//return n2;
+	return Vector3(n.x, n.z, n.y);
+}
+
+Vector3 Tracer::GetColor(Ray &ray) {
+	return surfaces[ray.geomID]->get_material()->diffuse;
+}
+
+Vector3 Tracer::GetPoint(Ray &ray) {
+	return ray.eval(ray.tfar) - ((Vector3)ray.dir * 0.001f);
+}
+
+Vector3 Tracer::GetLightPos() {
+	return lightPos;
+}
+
+Vector3 Tracer::GetLightDir(Vector3 point) {
+	return (GetLightPos() - point).Normalized();
 }
 
 cv::Vec3d Tracer::GetCubeMapColor(Vector3 dir) {

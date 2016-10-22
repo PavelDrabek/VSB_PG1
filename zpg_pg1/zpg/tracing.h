@@ -23,9 +23,17 @@ public:
 
 private:
 
+	static const int maxDeep = 5;
+
 	int width_; /*!< Šíøka obrazu [px]. */
 	int height_; /*!< Výška obrazu [px]. */
 	bool done;
+
+	int nullDiffuseCount;
+	int raysAll;
+	int returnInterrupt;
+	int returnFinish;
+	int returnCubemap[maxDeep];
 
 	Camera* camera;
 	RTCScene* scene;
@@ -34,16 +42,17 @@ private:
 
 	Vector3 lightPos;
 
-	Vector3 GetNormal(Ray ray);
+	Vector3 GetPoint(Ray &ray);
+	Vector3 GetNormal(Ray &ray);
 	Vector3 GetLightPos();
-	Vector3 GetLightDir(Ray ray);
-	Vector3 GetColor(Ray ray);
+	Vector3 GetLightDir(Vector3 point);
+	Vector3 GetColor(Ray &ray);
 
-	cv::Vec3f GetCubeMapColor(Vector3 dir);
+	cv::Vec3d GetCubeMapColor(Vector3 dir);
 
-	cv::Vec3f TraceNormal(Ray ray);
-	cv::Vec3f TraceLambert(Ray ray);
-	cv::Vec3f TracePhong(Ray ray, int deep);
+	cv::Vec3d TraceNormal(Ray ray);
+	cv::Vec3d TraceLambert(Ray ray);
+	cv::Vec3d TracePhong(Ray ray, int deep);
 
 	std::thread m_thread;
 };

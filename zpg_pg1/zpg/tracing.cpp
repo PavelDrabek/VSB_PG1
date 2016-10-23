@@ -103,10 +103,10 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 	float dotDif = MAX(0, normal.DotProduct(lightDir));
 	float dotSpec = MAX(0, viewDir.DotProduct(lightReflect));
 
-	Ray lightRay = Ray(point, lightDir);
+	Ray lightRay = Ray(point, lightDir, 0, (GetLightPos() - point).SqrL2Norm());
 	rtcOccluded(*scene, lightRay);
 	int visibCoef = 1;
-	if (lightRay.geomID == 0) {
+	if (lightRay.geomID != -1) {
 		nullDiffuseCount++;
 		visibCoef = 0;
 	}

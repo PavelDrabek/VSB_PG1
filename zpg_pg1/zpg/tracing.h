@@ -19,6 +19,8 @@ public:
 	void ShowScene();
 	void ShowSceneLoop();
 
+	static void onMouse(int event, int x, int y, int, void*);
+
 	cv::Mat src_32fc3_img;
 
 private:

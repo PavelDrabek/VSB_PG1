@@ -192,6 +192,7 @@ void Tracer::TestBackgroundRender()
 
 void Tracer::ShowScene() {
 	cv::namedWindow("raytracer");
+	cv::setMouseCallback("raytracer", onMouse, this);
 	cv::imshow("raytracer", src_32fc3_img);
 }
 
@@ -208,4 +209,16 @@ void Tracer::ShowSceneLoop() {
 	} while (!done && cv::waitKey(100) != 32);
 	m_thread.join();
 	printf("\nRefreshing stop\n");
+}
+
+void Tracer::onMouse(int event, int x, int y, int flags, void* userdata)
+{
+	if (event != CV_EVENT_LBUTTONDOWN)
+		return;
+
+	Tracer* tracer = reinterpret_cast<Tracer*>(userdata);
+	cv::Vec3d c = tracer->src_32fc3_img.at<cv::Vec3d>(y, x);
+
+	printf("y = %d, x = %d, value = (%d, %d, %d)\n", y, x, (int)(c.val[2] * 255), (int)(c.val[1] * 255), (int)(c.val[0] * 255));
+	//std::cout << "y=" << y << "\t x=" << x << "\t value=" << c << "\n";
 }

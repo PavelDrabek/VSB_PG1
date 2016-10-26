@@ -1,0 +1,32 @@
+﻿  stdafx.cpp
+c:\users\dra0042\documents\vsb_pg1\zpg_pg1\zpg\cubemap.h(13): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  c:\users\dra0042\documents\vsb_pg1\zpg_pg1\zpg\cubemap.h(13): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
+  camera.cpp
+  cubemap.cpp
+  objloader.cpp
+  shaders.cpp
+  tracing.cpp
+tracing.cpp(11): warning C4244: 'argument': conversion from 'double' to 'const float', possible loss of data
+tracing.cpp(63): warning C4244: 'argument': conversion from 'int' to 'const float', possible loss of data
+tracing.cpp(133): warning C4244: 'argument': conversion from 'int' to 'const float', possible loss of data
+tracing.cpp(200): warning C4244: 'argument': conversion from 'int' to 'const float', possible loss of data
+  utils.cpp
+  vector4.cpp
+  pg1.cpp
+  color4.cpp
+  matrix4x4.cpp
+  quaternion.cpp
+  vector2.cpp
+  vector3.cpp
+  material.cpp
+  omnilight.cpp
+  ray.cpp
+  surface.cpp
+  texture.cpp
+  triangle.cpp
+  vertex.cpp
+  Generating code
+  All 1027 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  zpg.vcxproj -> C:\Users\dra0042\Documents\VSB_PG1\zpg_pg1\x64\Release\pg1.exe
+  zpg.vcxproj -> C:\Users\dra0042\Documents\VSB_PG1\zpg_pg1\x64\Release\pg1.pdb (Full PDB)

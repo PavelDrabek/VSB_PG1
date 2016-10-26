@@ -46,6 +46,7 @@ private:
 
 	Vector3 GetPoint(Ray &ray);
 	Vector3 GetNormal(Ray &ray);
+	Vector3 GetNormal(Triangle &triangle, Ray &ray);
 	Vector3 GetLightPos();
 	Vector3 GetLightDir(Vector3 point);
 	Vector3 GetColor(Ray &ray);

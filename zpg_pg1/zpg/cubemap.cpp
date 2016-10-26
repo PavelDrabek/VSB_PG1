@@ -3,17 +3,17 @@
 CubeMap::CubeMap(std::string directory) {
 
 	std::string filenames[6] = {
-		directory + "/posx.jpg",
-		directory + "/posy.jpg",
-		directory + "/posz.jpg",
-		directory + "/negx.jpg",
-		directory + "/negy.jpg",
-		directory + "/negz.jpg" };
+		"/posx.jpg",
+		"/posy.jpg",
+		"/posz.jpg",
+		"/negx.jpg",
+		"/negy.jpg",
+		"/negz.jpg" };
 
 	printf("\nLoading cubemap:\n");
 	for (int i = 0; i < 6; i++) {
-		printf("%s\n", filenames[i].c_str());
-		maps_[i] = LoadTexture((filenames[i]).c_str());
+		//printf("%s\n", filenames[i].c_str());
+		maps_[i] = LoadTexture((directory + filenames[i]).c_str());
 		showed[i] = false;
 	}
 }

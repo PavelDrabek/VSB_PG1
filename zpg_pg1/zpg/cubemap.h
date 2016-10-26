@@ -10,7 +10,7 @@ public:
 	~CubeMap();
 
 	bool showed[6];
-	Texture* maps_[];
+	Texture* maps_[6];
 	Color4 get_texel(Vector3 &direction);
 
 	void PrintShowedTextures();

@@ -29,7 +29,8 @@ Tracer::Tracer(const int width, const int height)
 	//camera = new Camera(width, height, Vector3(1, 1, 100), Vector3(2, 2, 1000), DEG2RAD(60.0f));
 	//camera = new Camera(width, height, Vector3(0, 0, 1), Vector3(1000, 0, 1000), DEG2RAD(90.0f)); 
 	//camera = new Camera(width, height, Vector3(-400, 150, -300)*0.6, Vector3(100, -50, -50), DEG2RAD(110.0f));
-	camera = new Camera(width, height, Vector3(-400, 370, -500), Vector3(70, 5, -40), DEG2RAD(40.0f));
+	//camera = new Camera(width, height, Vector3(-400, 370, -500), Vector3(70, 5, -40), DEG2RAD(40.0f));
+	camera = new Camera(width, height, Vector3(-140.0f, 110.0f, -175.0f), Vector3(0.0f, 40.0f, 0.0f), DEG2RAD(42.185f));
     camera->Print();
 
 	//lightPos = camera->view_from();
@@ -94,14 +95,21 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 		return GetCubeMapColor(ray.dir);
 	}
 
+	Surface* surface = surfaces[ray.geomID];
+	Triangle triangle = surface->get_triangle(ray.primID);
+	Material* material = surface->get_material();
+	Texture* tex_diff = material->get_texture(Material::kDiffuseMapSlot);
+
 	Vector3 viewDir = ray.dir;
 	Vector3 point = GetPoint(ray);
 	Vector3 normal = GetNormal(ray);
-	Vector3 lightDir = GetLightDir(point);
+	Vector3 lightDir = (lightPos - point).Normalized();
 	Vector3 lightReflect = normal.Reflect(lightDir);
 
+	Vector2 tuv = triangle.texture_coord(ray.u, ray.v);
+
 	float dotDif = MAX(0, normal.DotProduct(lightDir));
-	float dotSpec = MAX(0, viewDir.DotProduct(lightReflect));
+	float dotSpec = MAX(0, pow(viewDir.DotProduct(lightReflect), 2));
 
 	Ray lightRay = Ray(point, lightDir, 0, (GetLightPos() - point).SqrL2Norm());
 	rtcOccluded(*scene, lightRay);
@@ -111,11 +119,21 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 		visibCoef = 0;
 	}
 
+
 	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
-	Vector3 diffuse = GetColor(ray);
-	//Vector3 diffuse = Vector3(0.5f, 0.5f, 0.5f);
-	cv::Vec3d specular = ToColor(diffuse) * TracePhong(Ray(point, normal.Reflect(viewDir)), deep + 1) * dotSpec;
+	Vector3 diffuse = material->diffuse;
+	if (tex_diff != NULL) {
+		Color4 texel_diff = tex_diff->get_texel(tuv.x, tuv.y);
+		diffuse = Vector3(texel_diff.r, texel_diff.g, texel_diff.b);
+	}
+
+	cv::Vec3d traced = TracePhong(Ray(point, normal.Reflect(viewDir)), deep + 1);
+	cv::Vec3d specular = ToColor(diffuse) * traced * dotSpec;
 	cv::Vec3d phong = ToColor(ambient) + ToColor(visibCoef * diffuse * dotDif) + specular;
+
+
+
+	//cv::Vec3d P = ToColor(ambient) + 
 
 	returnFinish++;
 	return phong;

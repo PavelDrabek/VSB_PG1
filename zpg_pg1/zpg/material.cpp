@@ -18,6 +18,7 @@ Material::Material()
 	shininess = 1;
 
 	ior = -1;
+	transparency = 1;
 
 	memset( textures_, 0, sizeof( *textures_ ) * NO_TEXTURES );
 
@@ -58,6 +59,23 @@ Material::~Material()
 void Material::set_name( const char * name )
 {
 	name_ = std::string( name );
+	if (name_.compare("black_plastic") == 0) {
+		ior = 1.46f;
+		transparency = 1;
+	} else if (name_.compare("green_plastic_transparent") == 0) {
+		ior = 1.46f;
+		transparency = 0.25f;
+	} else if (name_.compare("white_plastic") == 0) {
+		ior = 1.46f;
+		transparency = 1;
+	} else if (name_.compare("white_plastic_4150p04") == 0) {
+		ior = 1.46f;
+		transparency = 1;
+	} else if (name_.compare("white_plastic_3069bp13") == 0) {
+		ior = 1.46f;
+		transparency = 1;
+	}
+	printf("Setting material %s ior to %f\n", name_.c_str(), ior);
 }
 
 std::string Material::get_name() const

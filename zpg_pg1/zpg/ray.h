@@ -13,6 +13,7 @@
 struct Ray : RTCRay
 {
 	float transparency;
+	float ior; // index of refraction
 
 	Ray( const Vector3 & origin, Vector3 direction, const float t_near = 0.0f, const float t_far = FLT_MAX )
 	{
@@ -37,6 +38,7 @@ struct Ray : RTCRay
 
 		// --- payload ---
 		transparency = 3.14f;
+		ior = 1;
 	}
 
 	Vector3 eval( const float t ) const

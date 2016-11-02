@@ -99,6 +99,8 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 	Triangle triangle = surface->get_triangle(ray.primID);
 	Material* material = surface->get_material();
 	Texture* tex_diff = material->get_texture(Material::kDiffuseMapSlot);
+	float mat_ior = material->ior;
+	float transparency = material->transparency;
 
 	Vector3 point = GetPoint(ray);
 	Vector3 normal = GetNormal(ray);
@@ -120,7 +122,9 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 		visibCoef = 0;
 	}
 
-
+	// snell law (index lomu - kam se paprsek odrazi), fresnel equation (pomer mezi propustnosti a odrazem)
+	// TODO: prekladova tabulka material -> index lomu
+	// normala muze byt v modelu otocena spatne - zjistovat, jestli jde paprsek ze vzduchu a pokud je dot(n,ray) zaporny, je otocena
 	Vector3 ambient = Vector3(0.1f, 0.1f, 0.1f);
 	Vector3 diffuse = material->diffuse;
 	if (tex_diff != NULL) {
@@ -128,8 +132,17 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 		diffuse = Vector3(texel_diff.r, texel_diff.g, texel_diff.b);
 	}
 
-	Vector3 traced = TracePhong(Ray(point, lightReflect), deep + 1);
-	Vector3 specular = traced * dotSpec;
+
+	Vector3 retracted = Vector3(0, 0, 0);
+	if (transparency < 1) {
+		float c = lightDir.DotProduct(-normal);
+		float r = (ray.ior / mat_ior);
+		Vector3 retractDir = r * lightDir + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
+		retracted = TracePhong(Ray(point, retractDir), deep + 1);
+	}
+
+	Vector3 reflected = TracePhong(Ray(point, lightReflect), deep + 1);
+	Vector3 specular = reflected * dotSpec;
 	Vector3 phong = ambient + visibCoef * diffuse * dotDif + specular;
 
 	//cv::Vec3d P = ToColor(ambient) + 

@@ -34,9 +34,9 @@ Tracer::Tracer(const int width, const int height)
     camera->Print();
 
 	//lightPos = camera->view_from();
-	lightPos = Vector3(-200, 0, 0);
+	lightPos = Vector3(-500, 0, 0);
 
-	std::string directory = "../../data/";
+	std::string directory = "../../data/church";
 	cubemap = new CubeMap(directory);
 
 	Vector3 n = Vector3(0, 1, 0);
@@ -65,7 +65,7 @@ void Tracer::Render()
 
 			//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceNormal(rtc_ray);
 			//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceLambert(rtc_ray);
-			src_32fc3_img.at<cv::Vec3d>(y, x) = TracePhong(rtc_ray, 0);
+			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TracePhong(rtc_ray, 0));
 		}
 	}
 	
@@ -80,10 +80,10 @@ void Tracer::Render()
 	done = true;
 }
 
-cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
+Vector3 Tracer::TracePhong(Ray ray, int deep) {
 	if (deep >= maxDeep) {
 		returnInterrupt++;
-		return cv::Vec3d(0, 0, 0);
+		return Vector3(0, 0, 0);
 		//return GetCubeMapColor(ray.dir);
 	}
 
@@ -100,11 +100,12 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 	Material* material = surface->get_material();
 	Texture* tex_diff = material->get_texture(Material::kDiffuseMapSlot);
 
-	Vector3 viewDir = ray.dir;
 	Vector3 point = GetPoint(ray);
 	Vector3 normal = GetNormal(ray);
+	Vector3 viewDir = ray.dir;
 	Vector3 lightDir = (lightPos - point).Normalized();
-	Vector3 lightReflect = normal.Reflect(lightDir);
+	Vector3 viewReflect = normal.Reflect(lightDir);
+	Vector3 lightReflect = normal.Reflect(viewDir);
 
 	Vector2 tuv = triangle.texture_coord(ray.u, ray.v);
 
@@ -127,11 +128,9 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 		diffuse = Vector3(texel_diff.r, texel_diff.g, texel_diff.b);
 	}
 
-	cv::Vec3d traced = TracePhong(Ray(point, normal.Reflect(viewDir)), deep + 1);
-	cv::Vec3d specular = ToColor(diffuse) * traced * dotSpec;
-	cv::Vec3d phong = ToColor(ambient) + ToColor(visibCoef * diffuse * dotDif) + specular;
-
-
+	Vector3 traced = TracePhong(Ray(point, lightReflect), deep + 1);
+	Vector3 specular = traced * dotSpec;
+	Vector3 phong = ambient + visibCoef * diffuse * dotDif + specular;
 
 	//cv::Vec3d P = ToColor(ambient) + 
 
@@ -139,7 +138,7 @@ cv::Vec3d Tracer::TracePhong(Ray ray, int deep) {
 	return phong;
 }
 
-cv::Vec3d Tracer::TraceLambert(Ray ray) {
+Vector3 Tracer::TraceLambert(Ray ray) {
 	rtcIntersect(*scene, ray);
 
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
@@ -151,10 +150,10 @@ cv::Vec3d Tracer::TraceLambert(Ray ray) {
 
 	float dot = GetNormal(ray).DotProduct(GetLightDir(GetPoint(ray)));
 	Vector3 lambert = MAX(0, dot) * diffuse;
-	return cv::Vec3d(lambert.z, lambert.y, lambert.x);
+	return lambert;
 }
 
-cv::Vec3d Tracer::TraceNormal(Ray ray) {
+Vector3 Tracer::TraceNormal(Ray ray) {
 	rtcIntersect(*scene, ray);
 
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
@@ -164,7 +163,7 @@ cv::Vec3d Tracer::TraceNormal(Ray ray) {
 	Vector3 normal = GetNormal(ray);
 	Vector3 color = ((normal * 0.5f) + Vector3(0.5f, 0.5f, 0.5f));
 
-	return cv::Vec3d(color.z, color.y, color.x);
+	return color;
 }
 
 Vector3 Tracer::GetNormal(Ray &ray) {
@@ -190,9 +189,9 @@ Vector3 Tracer::GetLightDir(Vector3 point) {
 	return (GetLightPos() - point).Normalized();
 }
 
-cv::Vec3d Tracer::GetCubeMapColor(Vector3 dir) {
+Vector3 Tracer::GetCubeMapColor(Vector3 dir) {
 	Color4 c4 = cubemap->get_texel(dir);
-	return cv::Vec3d(c4.b, c4.g, c4.r);
+	return Vector3(c4.r, c4.g, c4.b);
 }
 
 void Tracer::TestBackgroundRender()
@@ -201,7 +200,7 @@ void Tracer::TestBackgroundRender()
 	for (int y = 0; y < height_; y++) {
 		for (int x = 0; x < width_; x++) {
 			Ray rtc_ray = camera->GenerateRay(x, y);
-			src_32fc3_img.at<cv::Vec3d>(y, x) = GetCubeMapColor(rtc_ray.dir);
+			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(GetCubeMapColor(rtc_ray.dir));
 		}
 	}
 

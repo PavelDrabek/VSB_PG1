@@ -51,11 +51,11 @@ private:
 	Vector3 GetLightDir(Vector3 point);
 	Vector3 GetColor(Ray &ray);
 
-	cv::Vec3d GetCubeMapColor(Vector3 dir);
+	Vector3 GetCubeMapColor(Vector3 dir);
 
-	cv::Vec3d TraceNormal(Ray ray);
-	cv::Vec3d TraceLambert(Ray ray);
-	cv::Vec3d TracePhong(Ray ray, int deep);
+	Vector3 TraceNormal(Ray ray);
+	Vector3 TraceLambert(Ray ray);
+	Vector3 TracePhong(Ray ray, int deep);
 
 	std::thread m_thread;
 };

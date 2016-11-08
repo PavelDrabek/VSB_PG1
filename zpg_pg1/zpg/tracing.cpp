@@ -134,15 +134,28 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 
 
 	Vector3 retracted = Vector3(0, 0, 0);
+	float R = 1;
+	float T = 0;
 	if (transparency < 1) {
-		float c = lightDir.DotProduct(-normal);
+		Vector3 l = viewDir;
+		float c = abs(l.DotProduct(-normal));
 		float r = (ray.ior / mat_ior);
-		Vector3 retractDir = r * lightDir + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
-		retracted = TracePhong(Ray(point, retractDir), deep + 1);
+		Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
+		retracted = TracePhong(Ray(GetPoint(ray, false), retractDir), deep + 1);
+
+		float n1cosi = abs(ray.ior * c);
+		float n1cost = abs(ray.ior * retractDir.DotProduct(normal));
+		float n2cosi = abs(mat_ior * c);
+		float n2cost = abs(mat_ior * retractDir.DotProduct(normal));
+
+		float Rs = pow((n1cosi - n2cost) / (n1cosi + n2cost), 2);
+		float Rp = pow((n1cost - n2cosi) / (n1cost + n2cosi), 2);
+		R = (Rs + Rp) * 0.5f;
+		T = 1 - R;
 	}
 
 	Vector3 reflected = TracePhong(Ray(point, lightReflect), deep + 1);
-	Vector3 specular = reflected * dotSpec;
+	Vector3 specular = R * reflected * dotSpec + T * retracted;
 	Vector3 phong = ambient + visibCoef * diffuse * dotDif + specular;
 
 	//cv::Vec3d P = ToColor(ambient) + 
@@ -190,8 +203,8 @@ Vector3 Tracer::GetColor(Ray &ray) {
 	return surfaces[ray.geomID]->get_material()->diffuse;
 }
 
-Vector3 Tracer::GetPoint(Ray &ray) {
-	return ray.eval(ray.tfar) - ((Vector3)ray.dir * 0.001f);
+Vector3 Tracer::GetPoint(Ray &ray, bool stepBack) {
+	return ray.eval(ray.tfar) - ((Vector3)ray.dir * 0.001f) * (stepBack ? 1 : -1);
 }
 
 Vector3 Tracer::GetLightPos() {

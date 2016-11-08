@@ -44,7 +44,7 @@ private:
 
 	Vector3 lightPos;
 
-	Vector3 GetPoint(Ray &ray);
+	Vector3 GetPoint(Ray &ray, bool stepBack = true);
 	Vector3 GetNormal(Ray &ray);
 	Vector3 GetNormal(Triangle &triangle, Ray &ray);
 	Vector3 GetLightPos();

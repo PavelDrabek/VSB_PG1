@@ -25,7 +25,7 @@ public:
 
 private:
 
-	static const int maxDeep = 5;
+	static const int maxDeep = 6;
 
 	int width_; /*!< Šíøka obrazu [px]. */
 	int height_; /*!< Výška obrazu [px]. */

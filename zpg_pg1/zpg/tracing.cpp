@@ -132,16 +132,26 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 		diffuse = Vector3(texel_diff.r, texel_diff.g, texel_diff.b);
 	}
 
-
+	Vector3 reflected = TracePhong(Ray(point, lightReflect), deep + 1);
 	Vector3 retracted = Vector3(0, 0, 0);
 	float R = 1;
 	float T = 0;
 	if (transparency < 1) {
+		float n1 = mat_ior;
+		float n2 = ray.ior;
 		Vector3 l = viewDir;
 		float c = abs(l.DotProduct(-normal));
-		float r = (ray.ior / mat_ior);
-		Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
-		retracted = TracePhong(Ray(GetPoint(ray, false), retractDir), deep + 1);
+		float r = n2 / n1;
+		float cos_O2 = sqrt(1 - r*r * (1 - c*c));
+		//Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
+		Vector3 retractDir = r * l + (c - r * cos_O2) * normal;
+		Ray retracted_ray = Ray(GetPoint(ray, false), retractDir);
+		if (ray.ior == 1) {
+			retracted_ray.ior = mat_ior;
+		} else {
+			retracted_ray.ior = 1;
+		}
+		retracted = TracePhong(retracted_ray, deep + 1);
 
 		float n1cosi = abs(ray.ior * c);
 		float n1cost = abs(ray.ior * retractDir.DotProduct(normal));
@@ -152,11 +162,12 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 		float Rp = pow((n1cost - n2cosi) / (n1cost + n2cosi), 2);
 		R = (Rs + Rp) * 0.5f;
 		T = 1 - R;
+
+		return reflected * R * (dotSpec * material->specular) + retracted * T * material->diffuse;
 	}
 
-	Vector3 reflected = TracePhong(Ray(point, lightReflect), deep + 1);
-	Vector3 specular = R * reflected * dotSpec + T * retracted;
-	Vector3 phong = ambient + visibCoef * diffuse * dotDif + specular;
+	Vector3 specular = (R * reflected * dotSpec * material->specular * material->reflectivity) + T * retracted;
+	Vector3 phong = ambient + (diffuse * dotDif * visibCoef) + specular;
 
 	//cv::Vec3d P = ToColor(ambient) + 
 

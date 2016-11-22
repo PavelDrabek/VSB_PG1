@@ -72,6 +72,7 @@
 #include "cubemap.h"
 #include "camera.h"
 
+
 //#include "shaders.cpp"
 #include "tracing.h"
-
+#include "pathTracer.h"

@@ -3,11 +3,11 @@
 //rtcIntersect(*scene, rtc_ray); // find the closest hit of a ray segment with the scene
 //rtcOccluded(scene, rtc_ray); // determining if any hit between a ray segment and the scene exists
 
-cv::Vec3d ToColor(Vector3 v) {
+cv::Vec3d Tracer::ToColor(Vector3 v) {
 	return cv::Vec3d(v.z, v.y, v.x);
 }
 
-Vector3 ToVector(cv::Vec3d c) {
+Vector3 Tracer::ToVector(cv::Vec3d c) {
 	return Vector3(c.val[2], c.val[1], c.val[0]);
 }
 

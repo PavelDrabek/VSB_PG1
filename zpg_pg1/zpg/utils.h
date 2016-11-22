@@ -1,6 +1,9 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#define M_2PI 6.283185307179586 
+#define M_1_2PI 0.15915494309 
+
 #define MAT_ELEM( mat, type, x, y ) reinterpret_cast<type *>( ( mat ).data + \
 	( mat ).step * ( y ) + ( mat ).elemSize() * ( x ) )
 

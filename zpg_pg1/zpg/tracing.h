@@ -1,5 +1,6 @@
 #pragma once
 #include <thread>
+#include "helpful.h"
 
 #define DEG2RAD( x ) ( ( x ) * static_cast<float>( M_PI / 180 ) )
 
@@ -36,6 +37,9 @@ private:
 	int returnInterrupt;
 	int returnFinish;
 	int returnCubemap[maxDeep];
+
+	cv::Vec3d ToColor(Vector3 v);
+	Vector3 ToVector(cv::Vec3d c);
 
 	Camera* camera;
 	RTCScene* scene;

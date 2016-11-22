@@ -96,6 +96,9 @@
     <ClCompile Include="shaders.cpp">
       <Filter>Source Files\tracing</Filter>
     </ClCompile>
+    <ClCompile Include="pathTracer.cpp">
+      <Filter>Source Files\tracing</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -157,6 +160,12 @@
     </ClInclude>
     <ClInclude Include="cubemap.h">
       <Filter>Header Files\tracing</Filter>
+    </ClInclude>
+    <ClInclude Include="pathTracer.h">
+      <Filter>Header Files\tracing</Filter>
+    </ClInclude>
+    <ClInclude Include="helpful.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

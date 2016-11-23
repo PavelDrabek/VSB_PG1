@@ -74,7 +74,11 @@ void Material::set_name( const char * name )
 	} else if (name_.compare("white_plastic_3069bp13") == 0) {
 		ior = 1.46f;
 		transparency = 1;
+	} else if (name_.compare("wire_214229166") == 0) {
+		ior = 1.46f;
+		transparency = 0.25f;
 	}
+	
 	printf("Setting material %s ior to %f\n", name_.c_str(), ior);
 }
 

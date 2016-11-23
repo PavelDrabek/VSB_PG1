@@ -160,6 +160,7 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 
 	rtcIntersect(*scene, ray);
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		//return GetCubeMapColor(ray.dir);
 		return Vector3(1, 1, 1);
 	}
 
@@ -187,7 +188,7 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 	}
 	Lo /= nrays;
 
-	return Le + Lo;
+	return Lo;
 }
 
 Vector3 PathTracer::GetOmega(Vector3 normal) {

@@ -150,7 +150,7 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 	Vector3 phong = ambient + light * cosOoN * matColor;
 
 	returnFinish++;
-	return light * M_PI;
+	return light;
 }
 
 Vector3 PathTracer::TraceLight(Ray ray, int deep) {
@@ -163,26 +163,31 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 		return Vector3(1, 1, 1);
 	}
 
+	double pdf = M_1_2PI;
+	double M_1_pdf = M_2PI;
 	Vector3 point = GetPoint(ray);
 	Vector3 normal = GetNormal(ray);
 
-	int nrays = 50;
-	if (deep > 0) {
-		nrays = 1;
-	}
+	int nrays = (deep > 0) ? 1 : 50;
+	
+	//Vector3 albedo = GetColor(ray);
+	Vector3 albedo = Vector3(0.6f);
+	Vector3 fr = albedo / M_PI;
+	Vector3 wo = -Vector3(ray.dir);
+	Vector3 Le = Vector3(0.0f); // GetColor(ray);
+	Vector3 Lo = Vector3(0.0f);
 
-	double pdf = M_1_2PI;
-	Vector3 light = Vector3(0, 0, 0);
 	for (int i = 0; i < nrays; i++)
 	{
-		Vector3 omega = GetOmega(normal);
-		Ray wRay = Ray(point, omega);
-		light += TraceLight(wRay, deep + 1);
+		Vector3 wi = GetOmega(normal);
+		float dot = normal.DotProduct(wi);
+		Ray wRay = Ray(point, wi);
+		Vector3 Li = TraceLight(wRay, deep + 1) * M_1_pdf;
+		Lo += Le + Li * fr * dot;
 	}
-	//light *= (pdf / nrays);
-	light *= pdf;
-	light /= nrays;
-	return light;
+	Lo /= nrays;
+
+	return Le + Lo;
 }
 
 Vector3 PathTracer::GetOmega(Vector3 normal) {

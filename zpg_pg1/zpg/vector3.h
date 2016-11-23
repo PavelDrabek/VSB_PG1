@@ -51,7 +51,9 @@ public:
 	\param y druhá složka vektoru.
 	\param z tøetí složka vektoru.
 	*/
-	Vector3( const float x, const float y, const float z ) : x( x ), y( y ), z( z ) { }
+	Vector3(const float x, const float y, const float z) : x(x), y(y), z(z) { }
+
+	Vector3(const float a) : x( a ), y( a ), z( a ) { }
 
 	Vector3(const Vector3 &v) : x(v.x), y(v.y), z(v.z) { }
 

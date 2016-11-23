@@ -60,7 +60,7 @@ void Tracer::Render()
 	std::clock_t timeStart = std::clock();
 
 	Vector3 lightDir = camera->view_from();
-#pragma omp parallel for schedule(dynamic, 5) shared(src_32fc3_img, scene, surfaces, materials)
+//#pragma omp parallel for schedule(dynamic, 5) shared(src_32fc3_img, scene, surfaces)
 	for (int y = 0; y < height_; y++) {
 		for (int x = 0; x < width_; x++) {
 			Ray rtc_ray = camera->GenerateRay(x, y);

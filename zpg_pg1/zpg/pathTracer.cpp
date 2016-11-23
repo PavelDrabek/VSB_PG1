@@ -74,8 +74,8 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
 		returnCubemap[deep]++;
-		//return Vector3(1, 1, 1);
-		return GetCubeMapColor(ray.dir);
+		return Vector3(1, 1, 1);
+		//return GetCubeMapColor(ray.dir);
 	}
 
 	Surface* surface = surfaces[ray.geomID];
@@ -103,6 +103,48 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 	float dotSpec = MAX(0, pow(viewDir.DotProduct(lightReflect), 2));
 	float cosOoN = MAX(0, normal.DotProduct(viewDir));
 
+	//int nrays = 10;
+	//if (deep > 0) {
+	//	nrays = 1;
+	//}
+
+	double pdf = M_1_2PI;
+	//Vector3 light = Vector3(0, 0, 0);
+	//for (int i = 0; i < nrays; i++)
+	//{
+	//	Vector3 omega = GetOmega(normal);
+	//	Ray wRay = Ray(point, omega);
+	//	light += TracePhong(wRay, deep + 1);
+	//}
+	//light /= nrays;
+	//light /= pdf;
+
+	// albedo = material->diffuse
+
+	Vector3 ambient = Vector3(1, 1, 1) * 0.1f;
+	Vector3 rayOrigin = (Vector3)ray.org;
+	Vector3 rayDir = (Vector3)ray.dir;
+	Ray lightRay = Ray(rayOrigin, rayDir);
+	Vector3 light = TraceLight(lightRay, 0);
+	Vector3 phong = ambient + light * cosOoN * matColor;
+
+	returnFinish++;
+	return light * M_PI;
+}
+
+Vector3 PathTracer::TraceLight(Ray ray, int deep) {
+	if (deep >= maxDeep) {
+		return Vector3(0, 0, 0);
+	}
+
+	rtcIntersect(*scene, ray);
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return Vector3(1, 1, 1);
+	}
+
+	Vector3 point = GetPoint(ray);
+	Vector3 normal = GetNormal(ray);
+
 	int nrays = 50;
 	if (deep > 0) {
 		nrays = 1;
@@ -114,15 +156,12 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 	{
 		Vector3 omega = GetOmega(normal);
 		Ray wRay = Ray(point, omega);
-		light += TracePhong(wRay, deep + 1);
+		light += TraceLight(wRay, deep + 1);
 	}
-	light *= (pdf / nrays);
-
-	Vector3 ambient = Vector3(1, 1, 1) * 0.1f;
-	Vector3 phong = ambient + light * cosOoN * matColor;
-
-	returnFinish++;
-	return phong;
+	//light *= (pdf / nrays);
+	light *= pdf;
+	light /= nrays;
+	return light;
 }
 
 Vector3 PathTracer::GetOmega(Vector3 normal) {
@@ -165,9 +204,14 @@ Vector3 PathTracer::TraceNormal(Ray ray) {
 
 Vector3 PathTracer::GetNormal(Ray &ray) {
 	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
+	n = Vector3(n.x, n.z, n.y);
+	if (n.DotProduct(ray.dir) > 0) // neni < 0, protoze paprsek leti opacnym smerem, tak at ho nemusim otacet
+	{ 
+		n = -n;
+	}
 	Vector3 n2 = ((Vector3)(ray.Ng)).Normalized();
 	//return n2;
-	return Vector3(n.x, n.z, n.y);
+	return n;
 }
 
 Vector3 PathTracer::GetColor(Ray &ray) {
@@ -233,6 +277,41 @@ void PathTracer::onMouse(int event, int x, int y, int flags, void* userdata)
 	PathTracer* tracer = reinterpret_cast<PathTracer*>(userdata);
 	cv::Vec3d c = tracer->src_32fc3_img.at<cv::Vec3d>(y, x);
 
-	printf("y = %d, x = %d, value = (%d, %d, %d)\n", y, x, (int)(c.val[2] * 255), (int)(c.val[1] * 255), (int)(c.val[0] * 255));
+	printf("Debug for y = %d, x = %d\n", y, x);
+	printf("  color = (%d, %d, %d)\n", (int)(c.val[2] * 255), (int)(c.val[1] * 255), (int)(c.val[0] * 255));
 	//std::cout << "y=" << y << "\t x=" << x << "\t value=" << c << "\n";
+
+
+
+	Ray ray = tracer->camera->GenerateRay(x, y);
+
+	rtcIntersect(*(tracer->scene), ray);
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return;
+	}
+
+	Vector3 point = tracer->GetPoint(ray);
+	Vector3 normal = tracer->GetNormal(ray);
+
+	//int nrays = 50;
+	//if (deep > 0) {
+	//	nrays = 1;
+	//}
+
+	double pdf = M_1_2PI;
+	Vector3 omega = tracer->GetOmega(normal);
+	printf("  normal = (%.2f, %.2f, %.2f)\n", normal.x, normal.y, normal.z);
+	printf("  omega  = (%.2f, %.2f, %.2f)\n", omega.x, omega.y, omega.z);
+	printf("  n . o  = %.4f\n", normal.DotProduct(omega));
+	Ray wRay = Ray(point, omega);
+	Vector3 light = tracer->TraceLight(wRay, maxDeep - 1);
+	printf("  light  = (%.2f, %.2f, %.2f)\n", light.x, light.y, light.z);
+
+	//Vector3 light = Vector3(0, 0, 0);
+	//for (int i = 0; i < nrays; i++)
+	//{
+	//	Vector3 omega = GetOmega(normal);
+	//	Ray wRay = Ray(point, omega);
+	//	light += TraceLight(wRay, deep + 1);
+	//}
 }

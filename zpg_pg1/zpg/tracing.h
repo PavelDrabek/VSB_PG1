@@ -1,6 +1,5 @@
 #pragma once
 #include <thread>
-#include "helpful.h"
 
 #define DEG2RAD( x ) ( ( x ) * static_cast<float>( M_PI / 180 ) )
 

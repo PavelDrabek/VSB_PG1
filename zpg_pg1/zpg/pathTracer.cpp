@@ -3,6 +3,27 @@
 //rtcIntersect(*scene, rtc_ray); // find the closest hit of a ray segment with the scene
 //rtcOccluded(scene, rtc_ray); // determining if any hit between a ray segment and the scene exists
 
+/*
+kniha - Global compendium (str 18, bod 34)
+### renderovaci rovnice
+wo = -viewDir
+wi =
+Li(wi) ... vstupni tok
+fr (x, y) .. fce vracejici scalar intenzity
+Lo (wo) = Le(wo) + integral( Li(wi) * fr(wo, wi) * (n * wi) ) d_wi
+### nahrazujeme integral sumou (metoda monte carlo)
+~~ (b-a) (1/N) suma( fi ) ~~ 1/N suma( (fi(xi) / pdf(xi) )
+
+vygenerovat kouli a rejectnout vuci normale
+uniformni, ne normalni!
+
+Li(wi).. ze zacatku 1, potom dosadit cubemapu
+fr(x,y) .. lambertuv povrch, jsou nam jedno vstupy, vracime "konstantu" (albedo/PI)
+albedo .. <0,1> ... odrazivost povrchu
+pokud dlouho nic netrefim, vracim L0 = 0, pripadne cubemapa mi muze vratit 1 nebo velky (plochou) zdroj svetla
+
+*/
+
 cv::Vec3d PathTracer::ToColor(Vector3 v) {
 	return cv::Vec3d(v.z, v.y, v.x);
 }

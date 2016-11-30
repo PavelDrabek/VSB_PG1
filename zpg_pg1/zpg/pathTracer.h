@@ -25,7 +25,7 @@ public:
 
 private:
 
-	static const int maxDeep = 10;
+	static const int maxDeep = 5;
 
 	int width_; /*!< Šíøka obrazu [px]. */
 	int height_; /*!< Výška obrazu [px]. */
@@ -58,6 +58,7 @@ private:
 	Vector3 GetCubeMapColor(Vector3 dir);
 
 	Vector3 TraceLight(Ray ray, int deep);
+	Vector3 BRDF_cos(Ray ray, int deep);
 	Vector3 TraceNormal(Ray ray);
 	Vector3 TraceLambert(Ray ray);
 	Vector3 TracePhong(Ray ray, int deep);

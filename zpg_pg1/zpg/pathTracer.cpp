@@ -68,7 +68,8 @@ void PathTracer::Render()
 	for (int y = 0; y < height_; y++) {
 		for (int x = 0; x < width_; x++) {
 			Ray rtc_ray = camera->GenerateRay(x, y);
-			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TracePhong(rtc_ray, 0));
+			//src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TracePhong(rtc_ray, 0));
+			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TraceLight(rtc_ray, 0));
 		}
 	}
 
@@ -95,8 +96,8 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 
 	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
 		returnCubemap[deep]++;
-		return Vector3(1, 1, 1);
-		//return GetCubeMapColor(ray.dir);
+		//return Vector3(1, 1, 1);
+		return GetCubeMapColor(ray.dir);
 	}
 
 	Surface* surface = surfaces[ray.geomID];
@@ -124,23 +125,7 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 	float dotSpec = MAX(0, pow(viewDir.DotProduct(lightReflect), 2));
 	float cosOoN = MAX(0, normal.DotProduct(viewDir));
 
-	//int nrays = 10;
-	//if (deep > 0) {
-	//	nrays = 1;
-	//}
-
 	double pdf = M_1_2PI;
-	//Vector3 light = Vector3(0, 0, 0);
-	//for (int i = 0; i < nrays; i++)
-	//{
-	//	Vector3 omega = GetOmega(normal);
-	//	Ray wRay = Ray(point, omega);
-	//	light += TracePhong(wRay, deep + 1);
-	//}
-	//light /= nrays;
-	//light /= pdf;
-
-	// albedo = material->diffuse
 
 	Vector3 ambient = Vector3(1, 1, 1) * 0.1f;
 	Vector3 rayOrigin = (Vector3)ray.org;
@@ -153,7 +138,51 @@ Vector3 PathTracer::TracePhong(Ray ray, int deep) {
 	return light;
 }
 
+/*
+Dalsi body za:
+* cosinus vazene vzorkovani (compendium 35)
+* BRDF zrcadla
+*/
+
 Vector3 PathTracer::TraceLight(Ray ray, int deep) {
+	if (deep >= maxDeep) {
+		return Vector3(0, 0, 0);
+	}
+
+	rtcIntersect(*scene, ray);
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return GetCubeMapColor(ray.dir);
+		//return Vector3(1, 1, 1);
+	}
+
+	double pdf = M_1_2PI;
+	double M_1_pdf = M_2PI;
+	Vector3 point = GetPoint(ray);
+	Vector3 normal = GetNormal(ray);
+
+	int nrays = (deep > 0) ? 1 : 40;
+	
+	//Vector3 albedo = GetColor(ray);
+	Vector3 albedo = Vector3(0.6f);
+	Vector3 fr = albedo / M_PI;
+	Vector3 wo = -Vector3(ray.dir);	// outgoing to camera
+	//Vector3 Le = Vector3(0.0f); // GetColor(ray);
+	
+	Vector3 Lo = Vector3(0.0f);
+	for (int i = 0; i < nrays; i++)
+	{
+		Vector3 wi = GetOmega(normal);	// incoming from light
+		float dot = normal.DotProduct(wi);
+		Ray wRay = Ray(point, wi);
+		Vector3 Li = TraceLight(wRay, deep + 1) * M_1_pdf;
+		Lo += /*Le + */Li * fr * dot;
+	}
+	Lo /= nrays;
+
+	return Lo;
+}
+
+Vector3 PathTracer::BRDF_cos(Ray ray, int deep) {
 	if (deep >= maxDeep) {
 		return Vector3(0, 0, 0);
 	}
@@ -170,21 +199,21 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 	Vector3 normal = GetNormal(ray);
 
 	int nrays = (deep > 0) ? 1 : 50;
-	
+
 	//Vector3 albedo = GetColor(ray);
 	Vector3 albedo = Vector3(0.6f);
 	Vector3 fr = albedo / M_PI;
-	Vector3 wo = -Vector3(ray.dir);
-	Vector3 Le = Vector3(0.0f); // GetColor(ray);
-	Vector3 Lo = Vector3(0.0f);
+	Vector3 wo = -Vector3(ray.dir);	// outgoing to camera
+									//Vector3 Le = Vector3(0.0f); // GetColor(ray);
 
+	Vector3 Lo = Vector3(0.0f);
 	for (int i = 0; i < nrays; i++)
 	{
-		Vector3 wi = GetOmega(normal);
+		Vector3 wi = GetOmega(normal);	// incoming from light
 		float dot = normal.DotProduct(wi);
 		Ray wRay = Ray(point, wi);
 		Vector3 Li = TraceLight(wRay, deep + 1) * M_1_pdf;
-		Lo += Le + Li * fr * dot;
+		Lo += /*Le + */Li * fr * dot;
 	}
 	Lo /= nrays;
 

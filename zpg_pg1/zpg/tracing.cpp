@@ -140,26 +140,27 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 	float R = 1;
 	float T = 0;
 	if (transparency < 1) {
-		float n1 = mat_ior;
-		float n2 = ray.ior;
+		float n1 = ray.ior;
+		float n2 = ray.ior == 1 ? mat_ior : 1;
 		Vector3 l = viewDir;
-		float c = abs(l.DotProduct(-normal));
+		float c = l.DotProduct(-normal);
+		if (c < 0) {
+			c = 1;
+		}
 		float r = n2 / n1;
 		float cos_O2 = sqrt(1 - r*r * (1 - c*c));
-		//Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
-		Vector3 retractDir = r * l + (c - r * cos_O2) * normal;
+		Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
+		//Vector3 retractDir = r * l + (c - r * cos_O2) * normal;
 		Ray retracted_ray = Ray(GetPoint(ray, false), retractDir);
-		if (ray.ior == 1) {
-			retracted_ray.ior = mat_ior;
-		} else {
-			retracted_ray.ior = 1;
-		}
+		retracted_ray.ior = n2;
 		retracted = TracePhong(retracted_ray, deep + 1);
 
-		float n1cosi = abs(ray.ior * c);
-		float n1cost = abs(ray.ior * retractDir.DotProduct(normal));
-		float n2cosi = abs(mat_ior * c);
-		float n2cost = abs(mat_ior * retractDir.DotProduct(normal));
+		float cosi = c;
+		float cost = abs(retractDir.DotProduct(normal));
+		float n1cosi = n1 * cosi;
+		float n1cost = n1 * cost;
+		float n2cosi = n2 * cosi;
+		float n2cost = n2 * cost;
 
 		float Rs = pow((n1cosi - n2cost) / (n1cosi + n2cost), 2);
 		float Rp = pow((n1cost - n2cosi) / (n1cost + n2cosi), 2);
@@ -208,9 +209,14 @@ Vector3 Tracer::TraceNormal(Ray ray) {
 
 Vector3 Tracer::GetNormal(Ray &ray) {
 	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
+	n = Vector3(n.x, n.z, n.y);
+	if (n.DotProduct(ray.dir) < 0) // neni < 0, protoze paprsek leti opacnym smerem, tak at ho nemusim otacet
+	{
+		n = -n;
+	}
 	Vector3 n2 = ((Vector3)(ray.Ng)).Normalized();
 	//return n2;
-	return Vector3(n.x, n.z, n.y);
+	return n;
 }
 
 Vector3 Tracer::GetColor(Ray &ray) {
@@ -276,6 +282,61 @@ void Tracer::onMouse(int event, int x, int y, int flags, void* userdata)
 	Tracer* tracer = reinterpret_cast<Tracer*>(userdata);
 	cv::Vec3d c = tracer->src_32fc3_img.at<cv::Vec3d>(y, x);
 
-	printf("y = %d, x = %d, value = (%d, %d, %d)\n", y, x, (int)(c.val[2] * 255), (int)(c.val[1] * 255), (int)(c.val[0] * 255));
-	//std::cout << "y=" << y << "\t x=" << x << "\t value=" << c << "\n";
+	printf("Debug for y = %d, x = %d\n", y, x);
+	printf("  color = (%d, %d, %d)\n", (int)(c.val[2] * 255), (int)(c.val[1] * 255), (int)(c.val[0] * 255));
+
+	Ray ray = tracer->camera->GenerateRay(x, y);
+
+	rtcIntersect(*(tracer->scene), ray);
+	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
+		return;
+	}
+
+	Vector3 point = tracer->GetPoint(ray);
+	Vector3 normal = tracer->GetNormal(ray);
+
+	printf("  normal = (%.2f, %.2f, %.2f)\n", normal.x, normal.y, normal.z);
+
+	Surface* surface = tracer->surfaces[ray.geomID];
+	Triangle triangle = surface->get_triangle(ray.primID);
+	Material* material = surface->get_material();
+	Texture* tex_diff = material->get_texture(Material::kDiffuseMapSlot);
+	float mat_ior = material->ior;
+	float transparency = material->transparency;
+
+	Vector3 viewDir = ray.dir;
+
+
+	float R = 1;
+	float T = 0;
+	if (transparency < 1) {
+		float n1 = ray.ior;
+		float n2 = ray.ior == 1 ? mat_ior : 1;
+		Vector3 l = viewDir;
+		float c = l.DotProduct(-normal);
+		printf("  c = %f\n", c);
+		if (c < 0) {
+			c = 1;
+		}
+		float r = n2 / n1;
+		float cos_O2 = sqrt(1 - r*r * (1 - c*c));
+		Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
+		//Vector3 retractDir = r * l + (c - r * cos_O2) * normal;
+
+		float cosi = c;
+		float cost = abs(retractDir.DotProduct(-normal));
+		float n1cosi = n1 * cosi;
+		float n1cost = n1 * cost;
+		float n2cosi = n2 * cosi;
+		float n2cost = n2 * cost;
+
+		float Rs = pow((n1cosi - n2cost) / (n1cosi + n2cost), 2);
+		float Rp = pow((n1cost - n2cosi) / (n1cost + n2cosi), 2);
+		R = (Rs + Rp) * 0.5f;
+		T = 1 - R;
+		printf("  R = %f\n", R);
+		printf("  T = %f\n", T);
+
+		//return reflected * R * (dotSpec * material->specular) + retracted * T * material->diffuse;
+	}
 }

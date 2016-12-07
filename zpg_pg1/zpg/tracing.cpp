@@ -30,9 +30,9 @@ Tracer::Tracer(const int width, const int height)
 	//camera = new Camera(width, height, Vector3(0, 0, 1), Vector3(1000, 0, 1000), DEG2RAD(90.0f)); 
 	//camera = new Camera(width, height, Vector3(-400, 150, -300)*0.6, Vector3(100, -50, -50), DEG2RAD(110.0f));
 	//camera = new Camera(width, height, Vector3(-400, 370, -500), Vector3(70, 5, -40), DEG2RAD(40.0f));
-	//camera = new Camera(width, height, Vector3(-140.0f, 110.0f, -175.0f), Vector3(0.0f, 40.0f, 0.0f), DEG2RAD(42.185f));
+	camera = new Camera(width, height, Vector3(-140.0f, 110.0f, -175.0f), Vector3(0.0f, 40.0f, 0.0f), DEG2RAD(42.185f));
 	//camera = new Camera(width, height, Vector3(0.0f, 0.0f, -3.0f), Vector3(0.0f, 0.0f, 1.0f), DEG2RAD(42.185f));
-	camera = new Camera(width, height, Vector3(0.0f, 0.0f, 3.0f), Vector3(0.0f, 0.0f, -1.0f), DEG2RAD(42.185f));
+	//camera = new Camera(width, height, Vector3(0.0f, 0.0f, 3.0f), Vector3(0.0f, 0.0f, -1.0f), DEG2RAD(42.185f));
     camera->Print();
 
 	//lightPos = camera->view_from();

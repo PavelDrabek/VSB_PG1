@@ -24,19 +24,12 @@ Tracer::Tracer(const int width, const int height)
 	src_32fc3_img = cv::Mat(height, width, CV_64FC3);
 
 	// default fov = 40
-	//camera = new Camera(width, height, Vector3(-400.0f, -500.0f, 370.0f), Vector3(70.0f, -40.5f, 5.0f), DEG2RAD(40.0f));
-	//camera = new Camera(width, height, Vector3(-200, 150, -300)*0.8, Vector3(100, -50, -50), DEG2RAD(110.0f)); 
-	//camera = new Camera(width, height, Vector3(1, 1, 100), Vector3(2, 2, 1000), DEG2RAD(60.0f));
-	//camera = new Camera(width, height, Vector3(0, 0, 1), Vector3(1000, 0, 1000), DEG2RAD(90.0f)); 
-	//camera = new Camera(width, height, Vector3(-400, 150, -300)*0.6, Vector3(100, -50, -50), DEG2RAD(110.0f));
-	//camera = new Camera(width, height, Vector3(-400, 370, -500), Vector3(70, 5, -40), DEG2RAD(40.0f));
 	camera = new Camera(width, height, Vector3(-140.0f, 110.0f, -175.0f), Vector3(0.0f, 40.0f, 0.0f), DEG2RAD(42.185f));
-	//camera = new Camera(width, height, Vector3(0.0f, 0.0f, -3.0f), Vector3(0.0f, 0.0f, 1.0f), DEG2RAD(42.185f));
 	//camera = new Camera(width, height, Vector3(0.0f, 0.0f, 3.0f), Vector3(0.0f, 0.0f, -1.0f), DEG2RAD(42.185f));
     camera->Print();
 
 	//lightPos = camera->view_from();
-	lightPos = Vector3(-500, 0, 0);
+	lightPos = Vector3(-500, 100, -200);
 
 	std::string directory = "../../data/church";
 	cubemap = new CubeMap(directory);
@@ -64,11 +57,10 @@ void Tracer::Render()
 	for (int y = 0; y < height_; y++) {
 		for (int x = 0; x < width_; x++) {
 			Ray rtc_ray = camera->GenerateRay(x, y);
-			//rtcIntersect(*scene, rtc_ray); 
+			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TracePhong(rtc_ray, 0));
 
 			//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceNormal(rtc_ray);
 			//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceLambert(rtc_ray);
-			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TracePhong(rtc_ray, 0));
 		}
 	}
 	
@@ -105,6 +97,8 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 	float mat_ior = material->ior;
 	float transparency = material->transparency;
 
+	Vector3 camPos = Vector3(camera->view_from());
+
 	Vector3 point = GetPoint(ray);
 	Vector3 normal = GetNormal(ray);
 	Vector3 viewDir = ray.dir;
@@ -113,9 +107,10 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 	Vector3 lightReflect = normal.Reflect(viewDir);
 
 	Vector2 tuv = triangle.texture_coord(ray.u, ray.v);
+	Vector3 halfVector = Vector3(camPos - point + lightPos - point).Normalized();
 
 	float dotDif = MAX(0, normal.DotProduct(lightDir));
-	float dotSpec = MAX(0, pow(viewDir.DotProduct(lightReflect), 2));
+	float dotSpec = pow(MAX(0, normal.DotProduct(halfVector)), 2);
 
 	Ray lightRay = Ray(point, lightDir, 0, (GetLightPos() - point).SqrL2Norm());
 	rtcOccluded(*scene, lightRay);
@@ -142,21 +137,18 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 	if (transparency < 1) {
 		float n1 = ray.ior;
 		float n2 = ray.ior == 1 ? mat_ior : 1;
-		Vector3 l = viewDir;
-		float c = l.DotProduct(-normal);
-		if (c < 0) {
-			c = 1;
-		}
-		float r = n2 / n1;
-		float cos_O2 = sqrt(1 - r*r * (1 - c*c));
-		Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
-		//Vector3 retractDir = r * l + (c - r * cos_O2) * normal;
-		Ray retracted_ray = Ray(GetPoint(ray, false), retractDir);
-		retracted_ray.ior = n2;
-		retracted = TracePhong(retracted_ray, deep + 1);
 
-		float cosi = c;
-		float cost = abs(retractDir.DotProduct(normal));
+		// snell law
+		Vector3 rd = viewDir;
+		float n_ratio = n1 / n2;
+		float cos_O2 = rd.DotProduct(-normal);
+		float cos_O1 = sqrt(MAX(0, 1 - n_ratio*n_ratio * (1 - cos_O2*cos_O2)));
+		Vector3 rr = -n_ratio * rd - (n_ratio * cos_O2 + cos_O1) * normal;
+		Vector3 lr = -normal.Reflect(rr);
+		
+		// fresnel equation
+		float cosi = cos_O2;
+		float cost = cos_O1;
 		float n1cosi = n1 * cosi;
 		float n1cost = n1 * cost;
 		float n2cosi = n2 * cosi;
@@ -165,15 +157,31 @@ Vector3 Tracer::TracePhong(Ray ray, int deep) {
 		float Rs = pow((n1cosi - n2cost) / (n1cosi + n2cost), 2);
 		float Rp = pow((n1cost - n2cosi) / (n1cost + n2cosi), 2);
 		R = (Rs + Rp) * 0.5f;
+		//R = 0;
 		T = 1 - R;
 
-		return reflected * R * (dotSpec * material->specular) + retracted * T * material->diffuse;
+		if (T > 0) {
+			Ray retracted_ray = Ray(GetPoint(ray, false), lr);
+			retracted_ray.ior = n2;
+			retracted = TracePhong(retracted_ray, deep + 1);
+		}
+		return retracted * T * diffuse + reflected * R * material->reflectivity;
 	}
 
-	Vector3 specular = (R * reflected * dotSpec * material->specular * material->reflectivity) + T * retracted;
-	Vector3 phong = ambient + (diffuse * dotDif * visibCoef) + specular;
+	//Vector3 specular = (R * reflected * dotSpec * material->specular * material->reflectivity) + T * retracted;
+	Vector3 phong = 
+		ambient + 
+		diffuse * dotDif * visibCoef + 
+		material->specular * dotSpec * reflected * material->reflectivity;
 
 	//cv::Vec3d P = ToColor(ambient) + 
+
+	//return transmitivity * transmitedColor * load.diffuse_color
+	//	+ reflectivity * reflected_color * load.material->reflectivity;
+
+	//return load.ambient_color +
+	//diffuse * inShadow * diffuseSlider +
+	//specular * specularSlider * reflected_color;
 
 	returnFinish++;
 	return phong;
@@ -210,7 +218,7 @@ Vector3 Tracer::TraceNormal(Ray ray) {
 Vector3 Tracer::GetNormal(Ray &ray) {
 	Vector3 n = surfaces[ray.geomID]->get_triangle(ray.primID).normal(ray.u, ray.v).Normalized();
 	n = Vector3(n.x, n.z, n.y);
-	if (n.DotProduct(ray.dir) < 0) // neni < 0, protoze paprsek leti opacnym smerem, tak at ho nemusim otacet
+	if (n.DotProduct(ray.dir) > 0) 
 	{
 		n = -n;
 	}
@@ -312,19 +320,24 @@ void Tracer::onMouse(int event, int x, int y, int flags, void* userdata)
 	if (transparency < 1) {
 		float n1 = ray.ior;
 		float n2 = ray.ior == 1 ? mat_ior : 1;
-		Vector3 l = viewDir;
-		float c = l.DotProduct(-normal);
-		printf("  c = %f\n", c);
-		if (c < 0) {
-			c = 1;
-		}
-		float r = n2 / n1;
-		float cos_O2 = sqrt(1 - r*r * (1 - c*c));
-		Vector3 retractDir = r * l + (r * c - sqrt(1 - r*r * (1 - c*c))) * normal;
-		//Vector3 retractDir = r * l + (c - r * cos_O2) * normal;
+		//n1 = 1.1111;
+		//n2 = 1;
 
-		float cosi = c;
-		float cost = abs(retractDir.DotProduct(-normal));
+		Vector3 rd = viewDir;
+		float cos_O2 = rd.DotProduct(-normal);
+		if (cos_O2 < 0) {
+			printf("e!");
+			cos_O2 = 1;
+		}
+		float n_ratio = n1 / n2;
+		float cos_O1 = sqrt(MAX(0, 1 - n_ratio*n_ratio * (1 - cos_O2*cos_O2)));
+		Vector3 rr = -n_ratio * rd - (n_ratio * cos_O2 + cos_O1) * normal;
+		Vector3 lr = -normal.Reflect(rr);
+
+
+		float cosi = cos_O2;
+		float cost = cos_O1;
+		//float cost = abs(rr.DotProduct(normal));
 		float n1cosi = n1 * cosi;
 		float n1cost = n1 * cost;
 		float n2cosi = n2 * cosi;
@@ -333,7 +346,9 @@ void Tracer::onMouse(int event, int x, int y, int flags, void* userdata)
 		float Rs = pow((n1cosi - n2cost) / (n1cosi + n2cost), 2);
 		float Rp = pow((n1cost - n2cosi) / (n1cost + n2cosi), 2);
 		R = (Rs + Rp) * 0.5f;
+		//R = 0;
 		T = 1 - R;
+
 		printf("  R = %f\n", R);
 		printf("  T = %f\n", T);
 

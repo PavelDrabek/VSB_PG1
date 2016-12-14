@@ -53,6 +53,8 @@ private:
 	Vector3 GetLightPos();
 	Vector3 GetLightDir(Vector3 point);
 	Vector3 GetColor(Ray &ray);
+	
+	Vector3 GetOmegaReflection(Vector3 normal, Vector3 incoming, float clearness);
 	Vector3 GetOmega(Vector3 normal);
 
 	Vector3 GetCubeMapColor(Vector3 dir);

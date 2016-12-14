@@ -171,7 +171,8 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 	Vector3 Lo = Vector3(0.0f);
 	for (int i = 0; i < nrays; i++)
 	{
-		Vector3 wi = GetOmega(normal);	// incoming from light
+		//Vector3 wi = GetOmega(normal);	// incoming from light
+		Vector3 wi = GetOmegaReflection(normal, wo, 0.01f);	// incoming from light
 		float dot = normal.DotProduct(wi);
 		Ray wRay = Ray(point, wi);
 		Vector3 Li = TraceLight(wRay, deep + 1) * M_1_pdf;
@@ -182,42 +183,19 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 	return Lo;
 }
 
-Vector3 PathTracer::BRDF_cos(Ray ray, int deep) {
-	if (deep >= maxDeep) {
-		return Vector3(0, 0, 0);
-	}
+Vector3 PathTracer::GetOmegaReflection(Vector3 normal, Vector3 incoming, float blur) {
+	Vector3 omega = normal.Reflect(-incoming);
 
-	rtcIntersect(*scene, ray);
-	if (ray.geomID == RTC_INVALID_GEOMETRY_ID) {
-		//return GetCubeMapColor(ray.dir);
-		return Vector3(1, 1, 1);
-	}
+	double r1 = Random(0, 1);
+	double r2 = Random(0, 1);
+	double phi = M_2PI * r1;
 
-	double pdf = M_1_2PI;
-	double M_1_pdf = M_2PI;
-	Vector3 point = GetPoint(ray);
-	Vector3 normal = GetNormal(ray);
+	float sqrt_1r = std::sqrt(1 - r2 * r2);
+	Vector3 rnd = Vector3(cos(phi) * sqrt_1r, sin(phi) * sqrt_1r, r2).Normalized(); 
+	rnd = (rnd.DotProduct(normal) < 0) ? -rnd : rnd;
 
-	int nrays = (deep > 0) ? 1 : 50;
-
-	//Vector3 albedo = GetColor(ray);
-	Vector3 albedo = Vector3(0.6f);
-	Vector3 fr = albedo / M_PI;
-	Vector3 wo = -Vector3(ray.dir);	// outgoing to camera
-									//Vector3 Le = Vector3(0.0f); // GetColor(ray);
-
-	Vector3 Lo = Vector3(0.0f);
-	for (int i = 0; i < nrays; i++)
-	{
-		Vector3 wi = GetOmega(normal);	// incoming from light
-		float dot = normal.DotProduct(wi);
-		Ray wRay = Ray(point, wi);
-		Vector3 Li = TraceLight(wRay, deep + 1) * M_1_pdf;
-		Lo += /*Le + */Li * fr * dot;
-	}
-	Lo /= nrays;
-
-	return Lo;
+	omega = omega + ((rnd - omega) * blur);
+	return omega.Normalized();
 }
 
 Vector3 PathTracer::GetOmega(Vector3 normal) {

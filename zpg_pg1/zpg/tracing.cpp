@@ -52,15 +52,21 @@ void Tracer::Render()
 	printf("\nRender started\n");
 	std::clock_t timeStart = std::clock();
 
+	int supersampling = 10;
+
 	Vector3 lightDir = camera->view_from();
 //#pragma omp parallel for schedule(dynamic, 5) shared(src_32fc3_img, scene, surfaces)
 	for (int y = 0; y < height_; y++) {
 		for (int x = 0; x < width_; x++) {
-			Ray rtc_ray = camera->GenerateRay(x, y);
-			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(TracePhong(rtc_ray, 0));
+			Vector3 c = Vector3(0, 0, 0);
+			for (int i = 0; i < supersampling; i++) {
+				Ray rtc_ray = camera->GenerateRay(x + Random(-0.5f, 0.5f), y + Random(-0.5f, 0.5f));
+				c += TracePhong(rtc_ray, 0);
 
-			//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceNormal(rtc_ray);
-			//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceLambert(rtc_ray);
+				//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceNormal(rtc_ray);
+				//src_32fc3_img.at<cv::Vec3d>(y, x) = TraceLambert(rtc_ray);
+			}
+			src_32fc3_img.at<cv::Vec3d>(y, x) = ToColor(c / (double)supersampling);
 		}
 	}
 	

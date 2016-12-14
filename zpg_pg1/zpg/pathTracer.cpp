@@ -183,6 +183,17 @@ Vector3 PathTracer::TraceLight(Ray ray, int deep) {
 	return Lo;
 }
 
+Vector3 PathTracer::GetOmegaCos(Vector3 normal) {
+	double rd = Random(0, 1);
+	double r1 = Random(0, 1);
+	double r2 = Random(0, 1);
+	double phi = M_2PI * r1;
+
+	float sqrt_1r = std::sqrt(1 - r2 * r2);
+	Vector3 omega = Vector3(cos(phi) * sqrt_1r, sin(phi) * sqrt_1r, r2).Normalized();
+	return (omega.DotProduct(normal) < 0) ? -omega : omega;
+}
+
 Vector3 PathTracer::GetOmegaReflection(Vector3 normal, Vector3 incoming, float blur) {
 	Vector3 omega = normal.Reflect(-incoming);
 
